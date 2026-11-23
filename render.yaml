@@ -1,0 +1,26 @@
+# Implantacao controlada. O Blueprint nao inicia um servico automaticamente.
+# Ao ativar este Blueprint no Render, sera necessario confirmar custos do plano e disco.
+services:
+  - type: web
+    name: biosaude-sao-camilo
+    runtime: python
+    plan: starter
+    region: ohio
+    branch: main
+    autoDeployTrigger: off
+    buildCommand: pip install -r requirements.txt
+    startCommand: 'sh -c "test -s /var/data/tuss.sqlite3 && exec streamlit run app.py --server.address 0.0.0.0 --server.port ${PORT:-10000} --server.headless true"'
+    healthCheckPath: /_stcore/health
+    disk:
+      name: tuss-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: BIOSAUDE_AUTH_MODE
+        value: public
+      - key: BIOSAUDE_TUSS_DB
+        value: /var/data/tuss.sqlite3
+      - key: BIOSAUDE_AUDIT_DB
+        value: /var/data/audit.sqlite3
