@@ -1,0 +1,37 @@
+# Ambientes e arquivos temporários
+.venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+.coverage
+*.log
+*.tmp
+*.bak
+*~
+~$*
+/tmp/
+/temp/
+
+# Credenciais e configurações locais
+.env
+.env.*
+!.env.example
+secrets.toml
+secrets.json
+credentials.json
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Bases, documentos privados e exportações
+/data/*
+!/data/.gitkeep
+/attachments/
+/uploads/
+/exports/
+/tests/fixtures/private/
+*.[xX][lL][sS]*
+*.[pP][dD][fF]
+*.[sS][qQ][lL][iI][tT][eE]*
+*.[dD][bB]*
