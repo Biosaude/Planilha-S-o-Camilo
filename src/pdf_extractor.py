@@ -53,12 +53,21 @@ def _header(words):
 
 def _columns(words, anchors):
     columns = defaultdict(list)
+    positions = dict(anchors)
     for word in words:
         key = anchors[0][0]
         for next_key, start in anchors[1:]:
             if word[0] < start - 2:
                 break
             key = next_key
+        # VS|OPME right-aligns prices: large amounts begin to the left of
+        # the monetary header but end at the same right-hand edge.
+        # Classify monetary tokens by their right edge, not their left edge.
+        if key in {'quantity', 'unit', 'total'} and MONEY_PATTERN.fullmatch(word[4]):
+            if word[2] >= positions['total'] - 2:
+                key = 'total'
+            elif word[2] >= positions['unit'] - 2:
+                key = 'unit'
         columns[key].append(word[4])
     return {key: ' '.join(parts) for key, parts in columns.items()}
 
