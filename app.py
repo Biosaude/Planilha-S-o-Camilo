@@ -20,6 +20,11 @@ WAIT = 1.0
 
 def _authenticate():
     mode = os.environ.get('BIOSAUDE_AUTH_MODE', 'local')
+    if mode == 'public':
+        # Acesso direto exclusivamente ao fluxo de cotacao. Nunca concede privilegios de administrador.
+        if 'public_identity' not in st.session_state:
+            st.session_state.public_identity = f'public:{uuid4().hex}'
+        return st.session_state.public_identity, 'operador'
     if mode == 'oidc':
         if not st.user.is_logged_in:
             if st.button('Entrar com a conta institucional', type='primary'):
@@ -251,8 +256,9 @@ st.set_page_config(page_title=TITLE, layout='wide')
 st.caption('BIOSAÚDE PRODUTOS HOSPITALARES')
 st.title(TITLE)
 identity = _authenticate()
-if st.sidebar.button('Sair', width='stretch'):
-    _logout()
+if os.environ.get('BIOSAUDE_AUTH_MODE', 'local') != 'public':
+    if st.sidebar.button('Sair', width='stretch'):
+        _logout()
 if identity[1] == 'administrador':
     section = st.sidebar.radio('Área', ['Cotação', 'Catálogo TUSS'])
     if section == 'Catálogo TUSS':
