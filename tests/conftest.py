@@ -50,7 +50,8 @@ def excel():
     return _xlsx(book), 'cotacao.xlsx'
 
 
-def make_pdf(*, corrupt_total=False, partial=False, wrapped=True):
+def make_pdf(*, corrupt_total=False, partial=False, wrapped=True,
+             declared_items='2', declared_units='4', declared_total='1.640,00'):
     columns = [15, 42, 103, 275, 340, 389, 469, 510]
     with pymupdf.open() as doc:
         page = doc.new_page()
@@ -67,8 +68,9 @@ def make_pdf(*, corrupt_total=False, partial=False, wrapped=True):
                     page.insert_text((x, 85 + 13 * i), value, fontsize=8)
         if wrapped:
             page.insert_text((103, 124), 'ROSQUEAV', fontsize=8)
-        page.insert_text((15, 150), 'Itens orçados: 2', fontsize=8)
-        page.insert_text((460, 165), 'Total geral: 1.640,00', fontsize=8)
+        page.insert_text((15, 150), f'Itens orçados: {declared_items}', fontsize=8)
+        page.insert_text((15, 165), f'Total de unidades: {declared_units}', fontsize=8)
+        page.insert_text((460, 165), f'Total geral: {declared_total}', fontsize=8)
         return doc.tobytes(), 'orcamento.pdf'
 
 

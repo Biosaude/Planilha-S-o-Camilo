@@ -27,3 +27,16 @@ def test_rejeita_tabela_inconsistente(kind):
 def test_pdf_invalido(data):
     with pytest.raises(QuoteError):
         extract_quote(data, 'orca.pdf')
+
+
+
+@pytest.mark.parametrize(('key', 'value', 'message'), [
+    ('declared_items', '3', 'quantidade de itens extraídos diverge'),
+    ('declared_units', '5', 'soma das quantidades extraídas diverge'),
+    ('declared_units', '4x', 'número de itens ou unidades'),
+    ('declared_total', '1.641,00', 'total do orçamento diverge'),
+    ('declared_total', '9.1.640,00', 'formato brasileiro'),
+])
+def test_confere_os_totais_do_rodape(key, value, message):
+    with pytest.raises(QuoteError, match=message):
+        extract_quote(*make_pdf(**{key: value}))

@@ -23,7 +23,8 @@ def test_fluxo_completo_sintetico(excel, pdf, catalog, tmp_path):
     output = generate(excel, analysis, {}, tmp_path / 'audit.sqlite', 'test', 'operador')
     sheet = load_workbook(BytesIO(output)).active
     assert (sheet['B4'].value, sheet['B3'].value) == ('00000123', '00000456')
-    assert sheet['E4'].value == 'MODELO A'
+    assert sheet['E4'].value == 'MODELO A - BIOSAUDE'
+    assert analysis.quote.products[0].brand == 'MODELO A'
 
 
 def test_orcamento_73358_com_arquivos_originais(tmp_path):
@@ -64,12 +65,18 @@ def test_orcamento_73358_com_arquivos_originais(tmp_path):
         ref, anvisa, units, unit, total, code = expected
         assert (product.reference, product.anvisa, product.quantity, product.unit, product.total) == (ref, anvisa, units, unit, total)
         assert [sheet.cell(row, c).value for c in (2, 4, 5, 6, 7, 8)] == [
-            code or None, product.description, product.brand, anvisa, unit, total,
+            int(code) if code else None, product.description, f'{product.brand} - BIOSAUDE', int(anvisa), unit, total,
         ]
     assert sheet['G29'].value == '=SUM(G9:G28)' and sheet['H29'].value == '=SUM(H9:H28)'
+    cached = load_workbook(BytesIO(result), data_only=True).active
+    assert cached['G29'].value == sum(product.unit for product in analysis.quote.products)
+    assert cached['H29'].value == 3480
+    assert sheet.parent.calculation.calcMode == 'auto'
     with ZipFile(BytesIO(excel[0])) as before, ZipFile(BytesIO(result)) as after:
         assert before.namelist() == after.namelist()
-        assert [part for part in before.namelist() if before.read(part) != after.read(part)] == ['xl/worksheets/sheet1.xml']
+        assert {part for part in before.namelist() if before.read(part) != after.read(part)} == {
+            'xl/worksheets/sheet1.xml', 'xl/workbook.xml',
+        }
     with sqlite3.connect(audit) as audit_db:
         assert audit_db.execute('SELECT item,hospital_row,action FROM decisions ORDER BY item').fetchall() == [
             (1, 17, 'confirmado_manual'), (6, 22, 'confirmado_manual'),

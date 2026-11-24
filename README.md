@@ -117,21 +117,20 @@ nem usa serviços externos de extração ou OCR.
 python -m pytest -q
 ```
 
-Para incluir o caso obrigatório, passe os quatro caminhos privados:
+Para incluir os dois orçamentos de referência, passe os cinco caminhos privados:
 
 ```bash
 BIOSAUDE_REQUIRE_REFERENCE=1 \
 BIOSAUDE_TEST_EXCEL='/privado/tabela orçamentária São Camilo.xlsx' \
 BIOSAUDE_TEST_PDF='/privado/Orçamento São Camilo.pdf' \
+BIOSAUDE_TEST_PDF_73582='/privado/orcamento-73582.pdf' \
 BIOSAUDE_TEST_TUSS_1='/privado/PLANILHA COM CÓDIGO TUSS_PARTE_1.xlsx' \
 BIOSAUDE_TEST_TUSS_2='/privado/PLANILHA COM CÓDIGO TUSS_PARTE_2.xlsx' \
 python -m pytest -q
 ```
 
-A execução com os quatro originais passou em 18 testes. O fluxo no Chromium
-também passou com upload dos originais, revisão, download e separação dos
-perfis. O banco importado contém 47.279 registros, com integridade SQLite
-verificada.
+O caso nº 73.582 confere 20 itens, 27 unidades e R$ 311.964,37 no PDF
+original, além da exportação dos valores e totais em um modelo sintético.
 
 O teste real confere as seis linhas e o total de R$ 3.480,00, as duas bases, os
 três códigos TUSS confirmados e os campos em branco. As linhas 17 e 22 exigem
@@ -139,14 +138,20 @@ revisão manual pelas divergências nas especificações registradas nos origina
 O teste exerce a confirmação nas duas linhas indicadas como referência no
 pedido. Essa confirmação depende de evidência técnica em uso operacional.
 
-A exportação usa OpenPyXL para validar e preparar as células e aplica as
-alterações no XML da aba original. A conferência compara a estrutura XML da aba fora dos valores autorizados
-e verifica que todas as outras partes do pacote permaneçam idênticas em bytes.
-Isso preserva inclusive a imagem, o binário de impressão, os estilos e a
-cadeia de cálculo do modelo fornecido. Fórmulas permanecem no arquivo e o
-recálculo fica a cargo do aplicativo de planilha ao abrir. O arquivo exportado
-foi reaberto com OpenPyXL. A abertura no Microsoft Excel precisa de validação
-no ambiente de destino.
+A exportação preserva o layout e as fórmulas do Excel. Na aba de cotação,
+atualiza os valores autorizados e os resultados armazenados das fórmulas
+suportadas. A configuração da pasta de trabalho solicita recálculo automático
+ao abrir. As demais partes do arquivo, incluindo imagem, estilos, binário de
+impressão e cadeia de cálculo, permanecem idênticas em bytes.
+
+As somas `SUM` de um intervalo da mesma coluna em G ou H e os totais de
+linha em H calculados por quantidade × preço, com ou sem `ROUND(...,2)`,
+têm resultados gravados quando os valores envolvidos podem ser calculados.
+Outras fórmulas são preservadas para recálculo pelo Excel. A coluna E recebe
+` - BIOSAUDE` somente na exportação. TUSS e ANVISA compostos apenas por
+dígitos, com até 11 dígitos e sem zeros iniciais, são gravados como números.
+Os demais identificadores são preservados como texto para manter sua
+representação e evitar arredondamento ou notação científica.
 
 O MVP aceita o PDF pesquisável no layout VS|OPME validado e uma única tabela
 visível com os cabeçalhos autorizados do São Camilo nas colunas B e D–H.

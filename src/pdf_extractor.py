@@ -22,7 +22,11 @@ METADATA = re.compile(r'^(?:data|pag|orcamento|cliente|paciente|hospital|medico|
                       r'endereco|cidade|estado|cep|fone|telefone|e mail|cnpj|contato|cirurgia|'
                       r'vendedor|solicitante|pedido|biosaude|observacao|observacoes|'
                       r'validade da proposta|condicoes|prazo de entrega)(?: |$)')
-FOOTER = re.compile(r'^(?:sub ?total|total geral|total produtos|itens orcados|total de unidades)(?: |$)')
+FOOTER = re.compile(
+    r'\b(?P<amount>sub\s*total|total\s+(?:geral|produtos))\b|'
+    r'\b(?P<count>itens\s+or[cç]ados)\b|\b(?P<units>total\s+de\s+unidades)\b',
+    re.IGNORECASE,
+)
 ISSUED = re.compile(r'orçamento\s*(?:n[º°o.]?\s*)?:?\s*[\d.]+\s+de\s+'
                     r'(\d{2}/\d{2}/(?:\d{4}|\d{2}))\b', re.I)
 
@@ -53,14 +57,41 @@ def _header(words):
 
 def _columns(words, anchors):
     columns = defaultdict(list)
-    for word in words:
-        key = anchors[0][0]
-        for next_key, start in anchors[1:]:
-            if word[0] < start - 2:
-                break
-            key = next_key
-        columns[key].append(word[4])
+    positions = dict(anchors)
+    for index, word in enumerate(words):
+        value = word[4]
+        # Identifica o preço pela borda direita mesmo quando um valor largo
+        # começa na coluna anterior. O token inteiro deve ser monetário.
+        if re.fullmatch(MONEY_PATTERN, value) and word[2] >= positions['unit'] - 2:
+            key = 'total' if word[2] >= positions['total'] - 2 else 'unit'
+        elif (value == 'R$' and index + 1 < len(words)
+              and re.fullmatch(MONEY_PATTERN, words[index + 1][4])
+              and words[index + 1][2] >= positions['unit'] - 2
+              and 0 <= words[index + 1][0] - word[2] <= 8):
+            continue
+        else:
+            key = anchors[0][0]
+            for next_key, start in anchors[1:]:
+                if word[0] < start - 2:
+                    break
+                key = next_key
+        columns[key].append(value)
     return {key: ' '.join(parts) for key, parts in columns.items()}
+
+
+def _footer_values(line, labels):
+    for i, label in enumerate(labels):
+        end = labels[i + 1].start() if i + 1 < len(labels) else len(line)
+        value = line[label.end():end].lstrip(' .:').strip()
+        kind = label.lastgroup
+        if kind == 'amount':
+            yield kind, money(value)
+        elif kind == 'count' and re.fullmatch(r'[0-9]+', value):
+            yield kind, int(value)
+        elif kind == 'units' and (units := quantity(value)) is not None:
+            yield kind, units
+        else:
+            raise QuoteError('Um número de itens ou unidades declarado no PDF ficou ilegível.')
 
 
 def _product(record):
@@ -89,7 +120,8 @@ def _append_continuation(record, columns):
 
 
 def _parse(document):
-    products, declared_totals, declared_counts, dates = [], [], [], set()
+    products, dates = [], set()
+    declared = defaultdict(list)
     active = None
     record = None
     indexes = set()
@@ -108,18 +140,12 @@ def _parse(document):
                 active = header
                 started = True
                 continue
-            if started and FOOTER.match(label):
+            if started and FOOTER.match(line):
                 if record:
                     products.append(_product(record))
                     record = None
-                if re.match(r'^(?:sub ?total|total geral|total produtos)\b', label) or 'total produtos' in label:
-                    amounts = re.findall(MONEY_PATTERN, line)
-                    if not amounts:
-                        raise QuoteError('Um total declarado no PDF ficou ilegível.')
-                    declared_totals.append(money(amounts[-1]))
-                count = re.search(r'itens orcados (\d+)\b', label)
-                if count:
-                    declared_counts.append(int(count.group(1)))
+                for key, value in _footer_values(line, list(FOOTER.finditer(line))):
+                    declared[key].append(value)
                 active = None
                 continue
             if not active or not label or METADATA.match(label):
@@ -153,9 +179,11 @@ def _parse(document):
         raise QuoteError('Tabela VS|OPME não localizada. Envie um PDF pesquisável com os cabeçalhos do orçamento.')
     if indexes and (len(indexes) != len(products) or {int(i) for i in indexes} != set(range(1, len(products) + 1))):
         raise QuoteError('A numeração indica itens ausentes ou duplicados no PDF.')
-    if any(count != len(products) for count in declared_counts):
+    if any(count != len(products) for count in declared['count']):
         raise QuoteError('A quantidade de itens extraídos diverge do total de itens do PDF.')
-    if any(total != sum(product.total for product in products) for total in declared_totals):
+    if any(units != sum(product.quantity for product in products) for units in declared['units']):
+        raise QuoteError('A soma das quantidades extraídas diverge do total de unidades do PDF.')
+    if any(total != sum(product.total for product in products) for total in declared['amount']):
         raise QuoteError('O total do orçamento diverge da soma dos produtos extraídos.')
     if len(dates) > 1:
         raise QuoteError('O PDF contém mais de uma data de emissão de orçamento.')

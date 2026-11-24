@@ -45,3 +45,44 @@ Se o banco TUSS ja estiver validado no computador de desenvolvimento, tambem e p
 ## Observacoes
 
 O instalador nao foi executado no Windows 11 da empresa; precisa ser testado nesse ambiente. Nao altera o fluxo de processamento, correspondencia, consulta TUSS ou exportacao Excel. O modo `public` foi criado anteriormente e e limitado ao perfil operador.
+
+## Atualizar uma instalação existente para a correção de cotações
+
+1. Use o atalho **Biosaude - Encerrar Sao Camilo** para parar a instância em
+   segundo plano. Com o aplicativo fechado, faça backup de `data` em um local
+   interno seguro, incluindo `tuss.sqlite3` e `audit.sqlite3`, se existir.
+2. Baixe e extraia **em outra pasta** o ZIP do commit aprovado pelo PR #5.
+   Copie `src\pdf_extractor.py` e `src\excel_writer.py` dele para `src` na
+   instalação existente. Preserve `.venv`, `data`, as duas bases e os atalhos.
+   Esta atualização usa o Python e as dependências instalados.
+3. Opcionalmente, na pasta instalada, confirme a versão do catálogo e a
+   integridade das dependências existentes:
+
+   ```powershell
+   .\.venv\Scripts\python.exe -m scripts.import_tuss --listar
+   .\.venv\Scripts\python.exe -m pip check
+   ```
+
+4. Inicie pelo atalho **Biosaude - Cotacao Sao Camilo**. Confira a abertura
+   no navegador local, sem terminal e sem solicitação de login. No encerramento,
+   use o atalho correspondente e confirme que a página local para de responder.
+
+### Conferência no Microsoft Excel
+
+1. Processe o PDF nº 73.582 com o Excel correspondente do hospital. Confira
+   os 20 itens e o total de R$ 311.964,37 no aplicativo. Some a coluna
+   Quantidade da conferência para confirmar as 27 unidades. Complete a revisão
+   das correspondências antes de exportar. Abra o arquivo baixado no Excel,
+   de preferência como a primeira pasta de trabalho da sessão.
+2. Sem editar fórmulas ou usar **Enter/F9**, confirme os totais. A soma de H
+   deve ser R$ 311.964,37 quando todos os 20 itens estiverem incluídos. A
+   soma dos preços unitários em G deve ser R$ 205.364,37 para os mesmos itens.
+3. Selecione as células de total e verifique na barra de fórmulas que as
+   expressões de soma foram preservadas. Confira **Fórmulas > Opções de
+   Cálculo > Automático** e verifique bordas, fontes, cores e visualização de
+   impressão.
+4. Compare B e F com o PDF e o catálogo. Os códigos numéricos comuns devem
+   aparecer sem notação científica nem aviso de número armazenado como
+   texto. Compare também os identificadores com zeros à esquerda ou letras.
+   Em E, confira o sufixo único ` - BIOSAUDE` nas linhas cotadas e os campos
+   vazios nas linhas não cotadas.
