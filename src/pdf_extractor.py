@@ -63,7 +63,7 @@ def _columns(words, anchors):
         # VS|OPME right-aligns prices: large amounts begin to the left of
         # the monetary header but end at the same right-hand edge.
         # Classify monetary tokens by their right edge, not their left edge.
-        if key in {'quantity', 'unit', 'total'} and MONEY_PATTERN.fullmatch(word[4]):
+        if key in {'quantity', 'unit', 'total'} and re.fullmatch(MONEY_PATTERN, word[4]):
             if word[2] >= positions['total'] - 2:
                 key = 'total'
             elif word[2] >= positions['unit'] - 2:
