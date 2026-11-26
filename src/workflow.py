@@ -24,7 +24,18 @@ class Analysis:
 def analyze(excel: tuple[bytes, str], pdf: tuple[bytes, str], database: Path) -> Analysis:
     hospital = read_hospital(*excel)
     quote = extract_quote(*pdf)
-    matches = match_products(quote.products, hospital.rows)
+    if len(quote.products) != len(hospital.rows):
+        raise QuoteError(
+            f'Quantidade de itens divergente: PDF com {len(quote.products)} e '
+            f'Excel com {len(hospital.rows)}. Confira a sequencia antes de preencher.'
+        )
+    for position, (product, row) in enumerate(zip(quote.products, hospital.rows, strict=True), 1):
+        if row.quantity is not None and row.quantity != product.quantity:
+            raise QuoteError(
+                f'Quantidade divergente no item {position}, linha {row.number} do Excel: '
+                f'PDF {product.quantity}, Excel {row.quantity}. Confira a sequencia.'
+            )
+    matches = tuple(Match(row) for row in hospital.rows)
     version, tuss = lookup_products(database, quote.products, quote.issued)
     return Analysis(uuid4().hex, quote, hospital, matches, version, tuss)
 
