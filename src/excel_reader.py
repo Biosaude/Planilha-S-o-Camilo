@@ -70,6 +70,7 @@ def read_hospital(payload: bytes, name: str) -> HospitalSheet:
         brand_col = _single_column(columns, BRAND)
         anvisa_col = _single_column(columns, ANVISA)
         rows = []
+        has_unreadable_quantities = False
         for row in range(header + 1, sheet.max_row + 1):
             cell = sheet.cell(row, description)
             requested = text_value(cell.value)
@@ -84,6 +85,7 @@ def read_hospital(payload: bytes, name: str) -> HospitalSheet:
                 continue
             units = quantity(sheet.cell(row, count_col).value) if count_col else None
             if count_col and units is None:
+                has_unreadable_quantities = True
                 continue
             reference = sheet.cell(row, ref_col) if ref_col else None
             brand = sheet.cell(row, brand_col) if brand_col else None
@@ -96,6 +98,6 @@ def read_hospital(payload: bytes, name: str) -> HospitalSheet:
             ))
         if not rows:
             raise QuoteError('Nenhuma linha de material legível foi localizada na tabela de cotação.')
-        return HospitalSheet(sheet.title, count_col, tuple(rows))
+        return HospitalSheet(sheet.title, count_col, tuple(rows), has_unreadable_quantities)
     finally:
         workbook.close()

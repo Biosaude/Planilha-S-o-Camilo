@@ -39,6 +39,7 @@ class HospitalSheet:
     title: str
     quantity_column: int | None
     rows: tuple[HospitalRow, ...]
+    has_unreadable_quantities: bool = False
 
 
 @dataclass(frozen=True)
