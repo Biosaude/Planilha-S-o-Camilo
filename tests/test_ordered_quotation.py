@@ -9,8 +9,8 @@ import pytest
 from openpyxl import load_workbook
 
 from src.excel_reader import read_hospital
-from src.material_matcher import match_products
-from src.models import HospitalRow, HospitalSheet, Product
+from src.material_matcher import match_products, review_warnings
+from src.models import HospitalRow, Product
 from src.pdf_extractor import extract_quote
 from src.tuss_importer import import_bases
 from src.workflow import _match_quotation, analyze, generate
@@ -18,34 +18,36 @@ from src.workflow import _match_quotation, analyze, generate
 
 def test_complete_ordered_quotation():
     rows = tuple(HospitalRow(i + 9, f'Pedido {i}', Decimal(2 if i in (15, 21) else 1)) for i in range(24))
-    hospital = HospitalSheet('Cotação', 1, rows)
     products = tuple(Product(f'Material {i}', 'MARCA', '12345678901', row.quantity,
                              Decimal(10), row.quantity * 10, str(i)) for i, row in enumerate(rows))
-    matches = _match_quotation(products, hospital)
+    matches = _match_quotation(products, rows)
     assert tuple(match.row for match in matches) == rows
     swapped = (products[15], *products[1:15], products[0], *products[16:])
     for altered in (products[:-1], swapped):
-        assert _match_quotation(altered, hospital) == match_products(altered, rows)
+        assert _match_quotation(altered, rows) == match_products(altered, rows)
     unknown = (replace(rows[0], quantity=None),) + rows[1:]
-    assert _match_quotation(products, replace(hospital, rows=unknown)) == match_products(products, unknown)
+    assert _match_quotation(products, unknown) == match_products(products, unknown)
 
 
 @pytest.mark.parametrize('invalid_quantity', [None, 'pendente'])
 def test_quantidade_ilegivel_no_excel_impede_correspondencia_por_ordem(excel, pdf, invalid_quantity):
     workbook = load_workbook(BytesIO(excel[0]))
     sheet = workbook.active
-    sheet['A3'], sheet['A4'] = 1, 3
-    sheet['A5'] = invalid_quantity
+    sheet['A3'], sheet['A4'], sheet['A5'] = 1, invalid_quantity, 3
     updated = BytesIO()
     workbook.save(updated)
     hospital = read_hospital(updated.getvalue(), excel[1])
     products = extract_quote(*pdf).products
-    assert len(hospital.rows) == len(products)
-    assert tuple(row.quantity for row in hospital.rows) == tuple(item.quantity for item in products)
-    assert hospital.has_unreadable_quantities
-    matches = _match_quotation(products, hospital)
+    assert tuple(row.number for row in hospital.rows) == (3, 4, 5)
+    assert tuple(row.quantity for row in hospital.rows) == (1, None, 3)
+    assert tuple(row.quantity for row in hospital.rows if row.quantity is not None) == tuple(
+        item.quantity for item in products
+    )
+    matches = _match_quotation(products, hospital.rows)
     assert matches == match_products(products, hospital.rows)
-    assert any(match.row is None for match in matches)
+    assert matches[0].row is None
+    assert hospital.rows[1] in matches[0].candidates
+    assert 'quantidade solicitada indisponível' in review_warnings(products[0], hospital.rows[1])
 
 
 def test_orcamento_73617_original_exporta_sem_revisao(tmp_path):
