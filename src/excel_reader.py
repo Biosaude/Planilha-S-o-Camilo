@@ -83,8 +83,6 @@ def read_hospital(payload: bytes, name: str) -> HospitalSheet:
             ):
                 continue
             units = quantity(sheet.cell(row, count_col).value) if count_col else None
-            if count_col and units is None:
-                continue
             reference = sheet.cell(row, ref_col) if ref_col else None
             brand = sheet.cell(row, brand_col) if brand_col else None
             anvisa = sheet.cell(row, anvisa_col) if anvisa_col else None
