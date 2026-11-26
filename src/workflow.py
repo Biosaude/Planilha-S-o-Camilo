@@ -21,10 +21,20 @@ class Analysis:
     tuss: tuple[TussResult, ...]
 
 
+def _match_quotation(products, rows):
+    # Complete quotations are prepared in the hospital's requested order.
+    if products and len(products) == len(rows) and all(
+        row.quantity is not None and row.quantity == product.quantity
+        for product, row in zip(products, rows, strict=True)
+    ):
+        return tuple(Match(row) for row in rows)
+    return match_products(products, rows)
+
+
 def analyze(excel: tuple[bytes, str], pdf: tuple[bytes, str], database: Path) -> Analysis:
     hospital = read_hospital(*excel)
     quote = extract_quote(*pdf)
-    matches = match_products(quote.products, hospital.rows)
+    matches = _match_quotation(quote.products, hospital.rows)
     version, tuss = lookup_products(database, quote.products, quote.issued)
     return Analysis(uuid4().hex, quote, hospital, matches, version, tuss)
 
