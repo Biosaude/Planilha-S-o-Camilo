@@ -101,7 +101,7 @@ def _review(analysis):
             'Quantidade': format(product.quantity, 'f'), 'Unitário': _brl(product.unit),
             'Total': _brl(product.total), 'Código TUSS': tuss.code or '—',
             'Correspondência': state,
-            'Situação TUSS': 'Confirmado' if tuss.code else 'Revisão necessária' if tuss.candidates else 'Não localizado',
+            'Situação TUSS': 'Preenchido automaticamente' if tuss.code else 'Em branco',
         })
         pending += not bool(row)
     overview = st.container()
@@ -109,7 +109,7 @@ def _review(analysis):
     for index, (product, match, tuss) in enumerate(
         zip(analysis.quote.products, analysis.matches, analysis.tuss, strict=True)
     ):
-        if match.row and (tuss.code or not tuss.candidates):
+        if match.row:
             continue
         key = 'review_' + analysis.key + '_' + str(index)
         with st.expander(f'{product.reference or f"Item {index + 1}"} · {product.description}'):
@@ -145,13 +145,6 @@ def _review(analysis):
                 elif action == 'Omitir item':
                     decisions[index] = None
                     table[index]['Correspondência'] = 'Omitido manualmente'
-            if not tuss.code and tuss.candidates:
-                st.write('Candidatos TUSS para conferência. O código ficará em branco nesta exportação.')
-                st.dataframe([{
-                    'Código': entry.code, 'Termo oficial': entry.description, 'Modelo': entry.model,
-                    'Fabricante': entry.manufacturer, 'ANVISA': entry.anvisa,
-                    'Início': entry.starts, 'Fim': entry.ends, 'Parte': entry.source, 'Linha': entry.row,
-                } for entry in tuss.candidates], width='stretch', hide_index=True)
     with overview:
         st.dataframe(table, width='stretch', hide_index=True)
         st.caption(f'Total do PDF {_brl(sum(product.total for product in analysis.quote.products))} · '
@@ -187,8 +180,9 @@ def _operation(identity):
         st.info(f'Revise ou omita os {pending - len(decisions)} itens pendentes para habilitar a exportação.')
     missing_codes = sum(not analysis.tuss[i].code for i, match in enumerate(analysis.matches)
                         if match.row or decisions.get(i) is not None)
-    if missing_codes:
-        st.info(f'{missing_codes} itens selecionados ficarão com TUSS em branco.')
+    if selected_rows:
+        st.info(f'TUSS: {len(selected_rows) - missing_codes} itens preenchidos automaticamente; '
+                f'{missing_codes} itens ficarão com TUSS em branco.')
     if st.button('Preparar planilha para download', disabled=conflicts or len(decisions) != pending or not selected_rows):
         st.session_state.pop('generated', None)
         try:
