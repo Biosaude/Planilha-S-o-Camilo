@@ -9,6 +9,7 @@ from zipfile import ZipFile
 import pytest
 from openpyxl import load_workbook
 
+from conftest import make_pdf
 from src.models import QuoteError
 from src.tuss_importer import FILENAMES, import_bases
 from src.workflow import analyze, generate
@@ -25,6 +26,28 @@ def test_fluxo_completo_sintetico(excel, pdf, catalog, tmp_path):
     assert (sheet['B4'].value, sheet['B3'].value) == ('00000123', '00000456')
     assert sheet['E4'].value == 'MODELO A - BIOSAUDE'
     assert analysis.quote.products[0].brand == 'MODELO A'
+
+
+@pytest.mark.parametrize(('anvisa', 'reference', 'expected'), [
+    ('10349000875', 'AFAPRO28', '10349000875 - AFAPRO28'),
+    ('01234567890', '000.00AB', '01234567890 - 000.00AB'),
+    ('', '000.00AB', '000.00AB'),
+    ('10987654321', '', '10987654321'),
+])
+def test_coluna_f_do_pdf_ao_excel(excel, catalog, tmp_path, anvisa, reference, expected):
+    pdf = make_pdf(second_anvisa=anvisa, second_reference=reference)
+    analysis = analyze(excel, pdf, catalog)
+    product = analysis.quote.products[1]
+    assert (product.anvisa, product.reference) == (anvisa, reference)
+    assert analysis.matches[1].row.number == 3
+    output = generate(excel, analysis, {}, tmp_path / 'audit.sqlite', 'test', 'operador')
+    sheet = load_workbook(BytesIO(output)).active
+    assert (sheet['F3'].value, sheet['F3'].data_type) == (expected, 's')
+    assert sheet['H3'].value == '=A3*G3'
+    assert sheet['H6'].value == '=SUM(H3:H5)'
+    assert sheet.parent.calculation.calcMode == 'auto'
+    cached = load_workbook(BytesIO(output), data_only=True).active
+    assert (cached['G6'].value, cached['H6'].value) == (680, 1640)
 
 
 def test_orcamento_73358_com_arquivos_originais(tmp_path):
@@ -65,7 +88,7 @@ def test_orcamento_73358_com_arquivos_originais(tmp_path):
         ref, anvisa, units, unit, total, code = expected
         assert (product.reference, product.anvisa, product.quantity, product.unit, product.total) == (ref, anvisa, units, unit, total)
         assert [sheet.cell(row, c).value for c in (2, 4, 5, 6, 7, 8)] == [
-            int(code) if code else None, product.description, f'{product.brand} - BIOSAUDE', int(anvisa), unit, total,
+            int(code) if code else None, product.description, f'{product.brand} - BIOSAUDE', f'{anvisa} - {ref}', unit, total,
         ]
     assert sheet['G29'].value == '=SUM(G9:G28)' and sheet['H29'].value == '=SUM(H9:H28)'
     cached = load_workbook(BytesIO(result), data_only=True).active

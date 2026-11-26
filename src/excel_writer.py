@@ -107,7 +107,7 @@ def _openpyxl_edits(workbook, hospital, assignments):
             2: _export_identifier(tuss) if tuss else None,
             4: product.description,
             5: _export_brand(product.brand) or None,
-            6: _export_identifier(product.anvisa),
+            6: ' - '.join(value for value in (product.anvisa, product.reference) if value) or None,
             7: product.unit,
             8: product.total,
         }

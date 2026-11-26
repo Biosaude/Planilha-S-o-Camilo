@@ -95,17 +95,20 @@ def _footer_values(line, labels):
 
 
 def _product(record):
-    required = REQUIRED - {'quantity'}
+    required = REQUIRED - {'quantity', 'anvisa'}
     if any(not record.get(key) for key in required):
-        raise QuoteError('O PDF contém item com descrição, marca, ANVISA ou valores incompletos.')
+        raise QuoteError('O PDF contém item com descrição, marca ou valores incompletos.')
+    anvisa = record.get('anvisa', '')
+    reference = record.get('reference', '')
+    if not (anvisa or reference):
+        raise QuoteError('O PDF contém item sem registro ANVISA nem código do produto.')
     units = quantity(record.get('quantity', ''))
-    if units is None or not anvisa_key(record['anvisa']) or not normalized(record['description']):
+    if units is None or (anvisa and not anvisa_key(anvisa)) or not normalized(record['description']):
         raise QuoteError('O PDF contém quantidade, registro ANVISA ou descrição ilegível.')
     unit, total = money(record['unit']), money(record['total'])
     if financial_total(units, unit) != total:
         raise QuoteError('Quantidade × valor unitário diverge do total em um item do PDF.')
-    return Product(record['description'], record['brand'], record['anvisa'], units, unit, total,
-                   record.get('reference', ''))
+    return Product(record['description'], record['brand'], anvisa, units, unit, total, reference)
 
 
 def _append_continuation(record, columns):
