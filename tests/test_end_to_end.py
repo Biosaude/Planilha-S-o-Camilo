@@ -65,7 +65,7 @@ def test_orcamento_73358_com_arquivos_originais(tmp_path):
         ref, anvisa, units, unit, total, code = expected
         assert (product.reference, product.anvisa, product.quantity, product.unit, product.total) == (ref, anvisa, units, unit, total)
         assert [sheet.cell(row, c).value for c in (2, 4, 5, 6, 7, 8)] == [
-            int(code) if code else None, product.description, f'{product.brand} - BIOSAUDE', int(anvisa), unit, total,
+            int(code) if code else None, product.description, f'{product.brand} - BIOSAUDE', f'{anvisa} - {ref}', unit, total,
         ]
     assert sheet['G29'].value == '=SUM(G9:G28)' and sheet['H29'].value == '=SUM(H9:H28)'
     cached = load_workbook(BytesIO(result), data_only=True).active
