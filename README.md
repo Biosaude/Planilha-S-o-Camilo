@@ -148,10 +148,12 @@ As somas `SUM` de um intervalo da mesma coluna em G ou H e os totais de
 linha em H calculados por quantidade × preço, com ou sem `ROUND(...,2)`,
 têm resultados gravados quando os valores envolvidos podem ser calculados.
 Outras fórmulas são preservadas para recálculo pelo Excel. A coluna E recebe
-` - BIOSAUDE` somente na exportação. TUSS e ANVISA compostos apenas por
-dígitos, com até 11 dígitos e sem zeros iniciais, são gravados como números.
-Os demais identificadores são preservados como texto para manter sua
-representação e evitar arredondamento ou notação científica.
+` - BIOSAUDE` somente na exportação. A coluna F (`ANVISA - REFERÊNCIA`) é
+gravada como texto no formato `10349000875 - AFAPRO28`, usando o valor da
+coluna Código do orçamento VS|OPME. Se houver só um identificador, a coluna
+F exibe esse valor sozinho. Letras, pontos e zeros à esquerda são preservados.
+A coluna B continua gravando como números os códigos TUSS de até 11 dígitos
+sem zeros iniciais. Os demais códigos TUSS permanecem como texto.
 
 O MVP aceita o PDF pesquisável no layout VS|OPME validado e uma única tabela
 visível com os cabeçalhos autorizados do São Camilo nas colunas B e D–H.

@@ -51,6 +51,7 @@ def excel():
 
 
 def make_pdf(*, corrupt_total=False, partial=False, wrapped=True,
+             second_reference='Y1234', second_anvisa='10987654321',
              declared_items='2', declared_units='4', declared_total='1.640,00'):
     columns = [15, 42, 103, 275, 340, 389, 469, 510]
     with pymupdf.open() as doc:
@@ -60,7 +61,8 @@ def make_pdf(*, corrupt_total=False, partial=False, wrapped=True,
         lines = [
             ['Item', 'Código', 'Descrição do produto', 'Reg.ANVISA', 'Marca', 'Qtde', 'Vr.unit.', 'Vr.total'],
             ['1', 'RAD6', 'INTRODUTOR RADIAL 6FR', '01234567890', 'MODELO A', '1', '200,00', '201,00' if corrupt_total else '200,00'],
-            ['2', 'Y1234', 'CONECT Y ACTP', '10987654321', 'MODELO B', '3', '480,00', '' if partial else '1.440,00'],
+            ['2', second_reference, 'CONECT Y ACTP', second_anvisa, 'MODELO B', '3', '480,00',
+             '' if partial else '1.440,00'],
         ]
         for i, row in enumerate(lines):
             for x, value in zip(columns, row, strict=True):

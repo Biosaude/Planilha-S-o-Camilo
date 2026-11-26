@@ -51,10 +51,12 @@ O instalador nao foi executado no Windows 11 da empresa; precisa ser testado nes
 1. Use o atalho **Biosaude - Encerrar Sao Camilo** para parar a instância em
    segundo plano. Com o aplicativo fechado, faça backup de `data` em um local
    interno seguro, incluindo `tuss.sqlite3` e `audit.sqlite3`, se existir.
-2. Baixe e extraia **em outra pasta** o ZIP do commit aprovado pelo PR #5.
+2. Baixe e extraia **em outra pasta** o ZIP do commit aprovado pelo PR #6.
    Copie `src\pdf_extractor.py` e `src\excel_writer.py` dele para `src` na
    instalação existente. Preserve `.venv`, `data`, as duas bases e os atalhos.
-   Esta atualização usa o Python e as dependências instalados.
+   O leitor de PDF aceita itens que têm código e cujo ANVISA está em branco.
+   O exportador grava os identificadores na coluna F. Use o Python e as
+   dependências instalados.
 3. Opcionalmente, na pasta instalada, confirme a versão do catálogo e a
    integridade das dependências existentes:
 
@@ -81,8 +83,9 @@ O instalador nao foi executado no Windows 11 da empresa; precisa ser testado nes
    expressões de soma foram preservadas. Confira **Fórmulas > Opções de
    Cálculo > Automático** e verifique bordas, fontes, cores e visualização de
    impressão.
-4. Compare B e F com o PDF e o catálogo. Os códigos numéricos comuns devem
-   aparecer sem notação científica nem aviso de número armazenado como
-   texto. Compare também os identificadores com zeros à esquerda ou letras.
+4. Compare B com o catálogo TUSS. Em F, confira o ANVISA seguido do valor da
+   coluna Código do PDF, por exemplo `10349000875 - AFAPRO28`. Se houver um
+   único identificador, confira que ele aparece sozinho. Confira também a
+   preservação de letras, pontos e zeros à esquerda.
    Em E, confira o sufixo único ` - BIOSAUDE` nas linhas cotadas e os campos
    vazios nas linhas não cotadas.

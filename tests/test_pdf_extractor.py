@@ -29,6 +29,13 @@ def test_pdf_invalido(data):
         extract_quote(data, 'orca.pdf')
 
 
+@pytest.mark.parametrize(('anvisa', 'reference', 'error'), [
+    ('', '', 'sem registro ANVISA nem código do produto'),
+    ('1234', '000.00AB', 'registro ANVISA ou descrição ilegível'),
+])
+def test_identificador_ausente_ou_invalido(anvisa, reference, error):
+    with pytest.raises(QuoteError, match=error):
+        extract_quote(*make_pdf(second_anvisa=anvisa, second_reference=reference))
 
 @pytest.mark.parametrize(('key', 'value', 'message'), [
     ('declared_items', '3', 'quantidade de itens extraídos diverge'),
