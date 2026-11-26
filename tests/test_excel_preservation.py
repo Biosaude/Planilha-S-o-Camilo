@@ -24,7 +24,7 @@ def test_preserva_estilos_formulas_impressao_e_celulas(excel, pdf):
     assert b['E5'].value is None
     assert b['H3'].value == '=A3*G3'
     assert b['G3'].value == 480 and b['H4'].value == 200
-    assert b['B4'].value == '00000123' and b['F4'].value == '01234567890'
+    assert b['B4'].value == '00000123' and b['F4'].value == f'{first.anvisa} - {first.reference}'
     assert b['H6'].value == '=SUM(H3:H5)' and new['Outra aba']['B4'].value == '=2*7'
     assert b['D5'].value == 'não alterar' and b['B5'].value == 'keep'
     assert a['G4'].style_id == b['G4'].style_id
@@ -83,7 +83,7 @@ def test_sufixo_apenas_na_exportacao(excel, pdf, brand, expected):
 
 
 @pytest.mark.parametrize(('tuss', 'anvisa', 'expected_tuss', 'expected_anvisa'), [
-    ('70771234', '10987654321', 70771234, 10987654321),
+    ('70771234', '10987654321', 70771234, '10987654321'),
     ('00000123', '01234567890', '00000123', '01234567890'),
     ('AB12345', 'ANV-001ABC', 'AB12345', 'ANV-001ABC'),
     ('1234567890123456', '123456789012', '1234567890123456', '123456789012'),
@@ -102,7 +102,7 @@ def test_tipos_numericos_e_identificadores_exatos(excel, pdf, tuss, anvisa, expe
     source = (buf.getvalue(), excel[1])
     result = export_workbook(*source, read_hospital(*source), [(4, item, tuss)])
     target = load_workbook(BytesIO(result)).active
-    for addr, value in {'B4': expected_tuss, 'F4': expected_anvisa, 'G4': 123456.78, 'H4': 123456.78}.items():
+    for addr, value in {'B4': expected_tuss, 'F4': f'{expected_anvisa} - {item.reference}', 'G4': 123456.78, 'H4': 123456.78}.items():
         assert target[addr].value == value
         assert target[addr].data_type == ('s' if isinstance(value, str) else 'n')
         assert target[addr].style_id == sheet[addr].style_id
@@ -145,3 +145,14 @@ def test_cache_total_linha_e_somas_com_recalculo_ao_abrir(excel, pdf, calc_mode)
     cached = load_workbook(BytesIO(result), data_only=True).active
     assert (cached['G6'].value, cached['H6'].value, cached['H3'].value) == (700, 1660, 1440)
     assert cached['H5'].value is None  # A linha não cotada não é regravada.
+
+
+@pytest.mark.parametrize('reference', ['AFAPRO28', '000123', '42.10.20100', ''])
+def test_anvisa_e_codigo_do_produto(excel, pdf, reference):
+    item = replace(extract_quote(*pdf).products[0], anvisa='01234567890', reference=reference)
+    result = export_workbook(*excel, read_hospital(*excel), [(4, item, '70771234')])
+    sheet = load_workbook(BytesIO(result)).active
+    assert sheet['F4'].value == ('01234567890 - ' + reference if reference else '01234567890')
+    assert sheet['F4'].data_type == 's'
+    assert sheet['B4'].value == 70771234
+    assert sheet['F3'].value is None
